@@ -4,96 +4,87 @@
 
 ; in: none, ret: none
 clear proc near
-    push ax
-    
+	push ax
     mov ax, 03h                         ; ah: 0h: set video mode
     int 10h                             ; al: 03h: 80*25*16, text
-    
-    pop ax
+	pop ax
     ret
 clear endp
 
 ; in: ah: row, al: column
 ; ret: none
 cursor proc near
-    push ax
     push bx
     push dx
-    
+    push ax
     mov dx, ax
     mov bh, 0
     mov ah, 02h                         ; set cursor position
     int 10h
-    
+    pop ax
     pop dx
     pop bx
-    pop ax
     ret
 cursor endp
 
 ; in: al: char, bl: attribute
 ; ret: none
 putc proc near
-    push ax
     push bx
     push cx
-    
+    push ax
+	mov bl,ah
     mov ah, 09h                         ; put char by cursor
-    mov bh, 0
-    ; mov bl, 70h
+    mov bh, 0    
     mov cx, 1
     int 10h
-    
+    pop ax
     pop cx
     pop bx
-    pop ax
     ret
 putc endp
 
 ; in: none, ret: none
 space proc near
-    push ax
     push dx
-    
+    push ax
     mov dl, 20h                         ; print char
     mov ah, 02h
     int 21h
-    
-    pop dx
     pop ax
+    pop dx
     ret
 space endp
 
 ; in: none, ret: none
 crlf proc near
-    push ax
     push dx
-    
+    push ax
     mov ah, 02h                         ; cr
     mov dl, 0dh
     int 21h
     mov dl, 0ah                         ; lf
     int 21h
-    
-    pop dx
     pop ax
+    pop dx
     ret
 crlf endp
 
 ; in: none, ret: ax
 getch proc near
+		
     mov ah, 01h                         ; input char
     int 21h
-    xor ah, ah
-    
+    xor ah, ah   
+	
     ret
 getch endp
 
 ; in: ds:bx, ret: ds:bx
 gets proc near
-    push ax
     push bx
-    
+    push ax
+	
 gets0:
     mov ah, 01h                         ; input char
     int 21h
@@ -105,18 +96,18 @@ gets0:
 gets1:
     mov byte ptr [bx], '$'              ; terminate inputed string
     
+	pop ax
     pop bx
-    pop ax
     ret
 gets endp
 
 ; in: ds:bx, ret: ds:bx
 iptpwd proc near
-    push ax
     push bx
-    
+    push ax
+	
 iptp0:
-    mov ah, 08h                         ; input char, no echo
+    mov ah, 08h                         ; input char, without echo
     int 21h
     cmp al, 0dh                         ; cr?
     je iptp1
@@ -127,58 +118,62 @@ iptp1:
     call crlf
     mov byte ptr [bx], '$'              ; terminate inputed password
     
+	pop ax
     pop bx
-    pop ax
     ret
 iptpwd endp
 
 ; in: none, ret: none
-pause proc near
-    push ax
+await proc near
     push dx
     push ds
-    jmp pause0
+	push ax
+	
+    jmp await0
     
-pause1: db 'Press Enter to continue.', '$'
-pause0:
-    mov ax, cs                          ; print message
+await1: db ' - Press Enter to continue - ', '$'
+await0:
+    mov ax, cs                          ; print tip
     mov ds, ax
-    mov dx, offset pause1
+    mov dx, offset await1
     call puts
-pause3:
-    mov ah, 08h                         ; input char, no echo
+await3:
+    mov ah, 08h                         ; input char no echo
     int 21h
     cmp al, 0dh
-    je pause2
-    jmp pause3
+    je await2
+    jmp await3
     
-pause2:
+await2:
     call crlf
+	
+	pop ax
     pop ds
     pop dx
-    pop ax
     ret
-pause endp
+await endp
 
 ; in: al, ret: none
 optch proc near
-    push ax
-    push dx
-    
+    push dx 
+	push ax
+	
     mov dl, al                          ; output char
     mov ah, 02h
-    int 21h
-    
+    int 21h  
+
+	pop ax
     pop dx
-    pop ax
     ret
 optch endp
 
 ; in: none, ret: ax
+; behavior: <ch><Space>|<Enter>
 iptch proc near
     push dx
     push di
-    
+   
+	
     mov di, 0                           ; flag
 iptc0:
     mov ah, 01h                         ; input char
@@ -196,7 +191,8 @@ iptc1:
     test di, di
     jz iptc0
     
-    mov ax, dx
+    mov ax, dx	
+	
     pop di
     pop dx
     ret
@@ -204,46 +200,40 @@ iptch endp
 
 ; in: dx, ret: none
 optstr proc near
-    push ax
-    
+	push ax
     mov ah, 09h                         ; print string
     int 21h
-    
     pop ax
     ret
 optstr endp
 
 ; in: dx, ret: none
 optstrq proc near
-    push ax
-    
     mov al, '"'                         ; enclose with quotes
     call optch
     call optstr
     mov al, '"'
     call optch
     
-    pop ax
     ret
 optstrq endp
 
 ; in: dx, ret:none
 puts proc near
     call optstr                         ; print string
-    call crlf                           ; print cr, lf
+    call crlf                           ; print cr lf
     ret
 puts endp
 
 ; in: dx, ret:none
 putsq proc near
     call optstrq                        ; print string enclosed by quotes
-    call crlf                           ; print cr, lf
+    call crlf                           ; print cr lf
     ret
 putsq endp
 
 ; in: ax, ret: none
 optdec proc near
-    push ax
     push bx
     push cx
     push dx
@@ -269,20 +259,18 @@ optd2:                                  ; print digit
     pop dx
     pop cx
     pop bx
-    pop ax
     ret
 optdec endp
 
 ; in: dx:ax
 ; ret: none
-optdecdw proc near                      ; dword
-    push ax
+optdecdw proc near                       ; dword
     push bx
     push cx
     push dx
     
     xor cx, cx                          ; count
-optddw0:                                ; /= 10
+optddw0:                                 ; /= 10
     cmp dx, ax
     jne optddw1
     test ax, ax
@@ -290,13 +278,13 @@ optddw0:                                ; /= 10
 optddw1:
     push cx
     mov cx, 10
-    call div32                          ; arith.inc
+    call div32
     pop cx
     add cx, 1
     push bx
     jmp optddw0
     
-optddw2:                                ; print digit
+optddw2:                                 ; print digit
     pop ax
     add ax, 30h
     mov dl, al
@@ -307,7 +295,6 @@ optddw2:                                ; print digit
     pop dx
     pop cx
     pop bx
-    pop ax
     ret
 optdecdw endp
 
@@ -349,7 +336,6 @@ iptdec endp
 
 ; in: ax, ret: none
 optdecs proc near
-    push ax
     push bx
     push cx
     push dx
@@ -389,7 +375,6 @@ optds2:                                 ; print digit
     pop dx
     pop cx
     pop bx
-    pop ax
     ret
 optdecs endp
 
@@ -436,8 +421,7 @@ iptdexit1:
     jz iptd2
 iptderr1:
     test si, si                         ; negative?
-    jz iptd3                            ; convert to two's 
-                                        ; complement representation
+    jz iptd3                            ; to two's complement
     neg bx
 iptd3:
     
@@ -466,7 +450,6 @@ hex2ascii endp
 
 ; in: ax, ret: none
 opt0x proc near
-    push ax
     push dx
     
     mov ah, 02h                         ; print '0x'
@@ -476,13 +459,11 @@ opt0x proc near
     int 21h
     
     pop dx
-    pop ax
     ret
 opt0x endp
 
 ; in: ax, ret: none
 opthex proc near
-    push ax
     push cx
     push dx
     
@@ -506,25 +487,25 @@ opth0:
     
     pop dx
     pop cx
-    pop ax
     ret
 opthex endp
 
 ; in: al; ret: none
 opthexb proc near                       ; byte
     push ax
-    
     call opt0x
+    pop ax
     xor ah, ah
     call opthex
     
-    pop ax
     ret
 opthexb endp
 
 ; in: ax, ret: none
 opthexw proc near                       ; word
+    push ax
     call opt0x
+    pop ax
     call opthex
     
     ret
@@ -532,7 +513,9 @@ opthexw endp
 
 ; in: dx:ax, ret: none
 opthexdw proc near                      ; dword
+    push ax
     call opt0x
+    pop ax
     xchg dx, ax
     call opthex
     xchg dx, ax
@@ -543,7 +526,9 @@ opthexdw endp
 
 ; in: dx:ax:cx:bx, ret: none
 opthexqw proc near                      ; qword
+    push ax
     call opt0x
+    pop ax
     xchg dx, ax
     call opthex
     xchg dx, ax
@@ -627,7 +612,6 @@ ipthex endp
 
 ; in: ax, ret: none
 optbin proc near
-    push ax
     push cx
     push dx
     
@@ -650,7 +634,6 @@ optb0:
     
     pop dx
     pop cx
-    pop ax
     ret
 optbin endp
 
@@ -704,7 +687,6 @@ iptbin endp
 
 ; in: ax, ret: none
 optbcd proc near
-    push ax
     push cx
     push dx
     push si
@@ -736,7 +718,6 @@ optbcd3:
     pop si
     pop dx
     pop cx
-    pop ax
     ret
 optbcd endp
 
@@ -784,7 +765,6 @@ iptbcd endp
 
 ; in: dx, cx: count
 printArray proc near
-    push ax
     push bx
     push cx
     
@@ -798,16 +778,15 @@ pa21:
     
     pop cx
     pop bx
-    pop ax
     ret
 printArray endp
 
 ; in: dx, cx: count
 printArrayS proc near
-    push ax
     push bx
     push cx
-    
+    push dx
+	
     mov bx, dx
 pa11:
     mov ax, [bx]                        ; "%d "
@@ -816,8 +795,8 @@ pa11:
     add bx, @WORD
     loop pa11
     
-    pop cx
+	pop dx
+	pop cx
     pop bx
-    pop ax
     ret
 printArrayS endp
