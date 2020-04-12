@@ -247,6 +247,7 @@ free endp
 ; in: dx: src, ds:bx: dest, cx: bytes to copy
 ; ret: ds:bx
 memcpy proc near
+    push cx
     push si
     push di
     
@@ -265,6 +266,7 @@ memcpy0:
     
     pop di
     pop si
+    pop cx
     ret
 memcpy endp
 
